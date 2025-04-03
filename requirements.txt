@@ -1,0 +1,8 @@
+python-telegram-bot
+google-auth
+google-api-python-client
+requests
+gspread
+oauth2client
+colorama
+nest_asyncio
