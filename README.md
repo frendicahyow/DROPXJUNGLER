@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Proyek Integrasi Telegram, Google Sheets & Airdrop Tools
 
 Proyek ini merupakan kumpulan script Python yang mengintegrasikan berbagai alat untuk mengelola data dan melakukan analisis terkait airdrop. Aplikasi ini terhubung ke Telegram untuk mengirim notifikasi dan ke Google Sheets untuk menyimpan serta mengupdate data secara otomatis.
