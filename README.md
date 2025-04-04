@@ -3,8 +3,6 @@
 
 Proyek ini merupakan kumpulan script Python yang mengintegrasikan berbagai alat untuk mengelola data dan melakukan analisis terkait airdrop. Aplikasi ini terhubung ke Telegram untuk mengirim notifikasi dan ke Google Sheets untuk menyimpan serta mengupdate data secara otomatis.
 
-> **Catatan:** Kode sumber telah diobfuscate menggunakan [PyArmor](https://pyarmor.readthedocs.io/) untuk melindungi logika internal. Jangan mendistribusikan kode sumber asli.
-
 ---
 
 ## Daftar Modul
