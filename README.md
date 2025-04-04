@@ -260,6 +260,5 @@ Ikuti langkah-langkah di atas secara berurutan untuk memastikan setup berjalan d
 Semoga panduan instalasi & setup ini membantu!
 
 untuk informasi lebih mendalam silahkan DM saya di ig 
-=======
-# DROPXJUNGLER
->>>>>>> 655723fc870c01d67eb918927a46b53572026891
+ DROPXJUNGLER
+
