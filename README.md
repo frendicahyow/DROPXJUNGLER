@@ -259,6 +259,4 @@ Ikuti langkah-langkah di atas secara berurutan untuk memastikan setup berjalan d
 
 Semoga panduan instalasi & setup ini membantu!
 
-untuk informasi lebih mendalam silahkan DM saya di ig 
- DROPXJUNGLER
-
+untuk informasi lebih mendalam silahkan DM saya di ig ntfound.404_
