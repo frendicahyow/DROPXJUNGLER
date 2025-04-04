@@ -15,7 +15,7 @@ init(autoreset=True)
 # KONFIGURASI GLOBAL
 # ====================================================
 # Untuk opsi 1 & 2, BASE_DIR tetap mengacu ke direktori ~/DropXJungler
-BASE_DIR = os.path.expanduser("~/DropXJungler")
+BASE_DIR = os.path.expanduser("~/DROPXJUNGLER")
 # Untuk opsi 3,4,5, file pendukung berada di direktori script (misalnya supervisormode)
 LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
 
