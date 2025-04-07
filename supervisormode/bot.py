@@ -3,6 +3,7 @@ import subprocess
 import datetime
 import collections
 import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from colorama import init, Fore, Style
@@ -13,24 +14,13 @@ init(autoreset=True)
 # ====================================================
 # KONFIGURASI GLOBAL
 # ====================================================
-BASE_DIR = os.path.expanduser("~/DROPXJUNGLER")
+# Untuk opsi 1 & 2, BASE_DIR tetap mengacu ke direktori ~/DropXJungler
+BASE_DIR = os.path.expanduser("~/DropXJungler")
+# Untuk opsi 3,4,5, file pendukung berada di direktori script (misalnya supervisormode)
 LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Inisialisasi Google Sheets API
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-
-# Dapatkan direktori script saat ini (misal: DROPXJUNGLER/reshareshing)
-script_dir = os.path.dirname(os.path.realpath(__file__))
-
-# Dapatkan direktori induk, yaitu folder DROPXJUNGLER
-parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
-
-# Susun path lengkap ke file credentials.json di folder induk
-credentials_path = os.path.join(parent_dir, 'credentials.json')
-
-# Muat kredensial dari file di folder induk
-creds = service_account.Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
-sheets_service = build('sheets', 'v4', credentials=creds)
+SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, 'credentials.json')
 
 # ----------------------------------------------------
 # BAGIAN 1 & 2: Opsi 1 dan 2 (tidak diubah)
@@ -43,7 +33,7 @@ SCRIPTS = {
     5: 'scriptinfo',
     6: 'data curator',
     7: 'monitoring',
-    8: 'proofwork'
+    8: 'proofwork'  # Tetap ada tapi tidak dijalankan di menu 1
 }
 DISPLAY_NAMES = {
     1: '1. Reshareshing',
@@ -58,15 +48,17 @@ DISPLAY_NAMES = {
 
 def get_credentials(dir_name):
     creds_path = os.path.join(BASE_DIR, dir_name, 'credentials.json')
+    scope = ['https://www.googleapis.com/auth/spreadsheets',
+             'https://www.googleapis.com/auth/drive']
     try:
-        creds = service_account.Credentials.from_service_account_file(creds_path, scopes=SCOPES)
+        creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
         return creds
     except Exception as e:
         print(f"Error credentials di {dir_name}: {str(e)}")
         return None
 
 def run_script(numbers=None):
-    if numbers is None:
+    if numbers is None:  # Mode pilihan manual (opsi 2)
         print("\nDaftar Script Tersedia:")
         for num in sorted(DISPLAY_NAMES.keys()):
             print(DISPLAY_NAMES[num])
@@ -180,11 +172,11 @@ def copy_data():
 def print_monitoring_header():
     header_text = f"""
 {Fore.CYAN}{Style.BRIGHT}
-╔════════════════════════════════════════════════════════════════
-║                      SYSTEM MONITORING REPORT                  
-╠════════════════════════════════════════════════════════════════
+╔════════════════════════════════════════════════════════════════════════════╗
+║                      SYSTEM MONITORING REPORT                              ║
+╠════════════════════════════════════════════════════════════════════════════╣
 ║ Date: {datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"):<40}║
-╚════════════════════════════════════════════════════════════════
+╚════════════════════════════════════════════════════════════════════════════╝
 {Style.RESET_ALL}
 """
     print(header_text)
@@ -443,4 +435,132 @@ def clear_supervisor_sheets_util(service, spreadsheet_id):
          ).execute()
          print(Fore.GREEN + "Ditambahkan sheet 'Blank' karena hanya ada satu sheet.")
          spreadsheet = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-         sheets = spreadsheet
+         sheets = spreadsheet.get('sheets', [])
+    delete_requests = []
+    for sheet in sheets:
+         title = sheet['properties']['title']
+         sheet_id = sheet['properties']['sheetId']
+         if title != "Blank":
+             delete_requests.append({
+                 "deleteSheet": {
+                     "sheetId": sheet_id
+                 }
+             })
+    if delete_requests:
+         body = {"requests": delete_requests}
+         service.spreadsheets().batchUpdate(
+             spreadsheetId=spreadsheet_id,
+             body=body
+         ).execute()
+         print(Fore.GREEN + "Sheet-sheet telah dihapus. Spreadsheet kini hanya memiliki sheet 'Blank'.")
+    else:
+         print(Fore.CYAN + "Tidak ada sheet yang dihapus.")
+
+def clear_role_data_util(service, spreadsheet_id):
+    spreadsheet = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+    sheets = spreadsheet.get('sheets', [])
+    sheet_titles = [sheet['properties']['title'] for sheet in sheets]
+    print(Fore.YELLOW + f"\nSpreadsheet (ID: {spreadsheet_id}) memiliki sheet:")
+    for title in sheet_titles:
+         print(Fore.YELLOW + f" - {title}")
+    for title in sheet_titles:
+         try:
+             service.spreadsheets().values().clear(
+                 spreadsheetId=spreadsheet_id,
+                 range=title,
+                 body={}
+             ).execute()
+             print(Fore.GREEN + f"Data pada sheet '{title}' telah dihapus.")
+         except Exception as e:
+             print(Fore.RED + f"Gagal menghapus data pada sheet '{title}': {e}")
+
+def clear_data_utility():
+    print_clear_banner()
+    creds = get_credentials_clear()
+    service = build('sheets', 'v4', credentials=creds)
+    print(Fore.CYAN + "Menu:")
+    print(Fore.CYAN + "1. Clear Supervisor (hapus sheet dari spreadsheet supervisormode)")
+    print(Fore.CYAN + "2. Clear All Role Data (hapus isi data dari setiap spreadsheet di sheetid.txt)")
+    choice = input(Fore.MAGENTA + "\nPilih opsi (1/2): " + Style.RESET_ALL)
+    if choice == '1':
+         supervisor_id = read_supervisor_id_clear('idsupervisor.txt')
+         print(Fore.CYAN + f"\nSupervisor Spreadsheet ID: {supervisor_id}")
+         clear_supervisor_sheets_util(service, supervisor_id)
+    elif choice == '2':
+         sheet_ids = read_sheet_ids_clear('sheetid.txt')
+         print(Fore.CYAN + "\nDaftar Spreadsheet dari sheetid.txt:")
+         for name, sid in sheet_ids.items():
+             print(Fore.CYAN + f" - {name}: {sid}")
+         confirm_all = input(Fore.MAGENTA + "\nApakah Anda yakin ingin menghapus data di semua spreadsheet di atas? (y/n): " + Style.RESET_ALL)
+         if confirm_all.lower() != 'y':
+             print(Fore.CYAN + "Operasi dibatalkan.")
+             return
+         for name, sid in sheet_ids.items():
+             print(Fore.CYAN + f"\nMenghapus data pada spreadsheet '{name}' (ID: {sid})...")
+             clear_role_data_util(service, sid)
+    else:
+         print(Fore.RED + "Opsi tidak valid.")
+    input("Tekan Enter untuk kembali ke menu utama...")
+
+# ====================================================
+# TAMPILAN MENU UTAMA
+# ====================================================
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def print_main_banner():
+    banner = f"""
+{Fore.WHITE}{Style.BRIGHT}
+██████  ██████   ██████  ██████  ██   ██      ██ ██    ██ ███    ██  ██████  ██      ███████ ██████  
+██   ██ ██   ██ ██    ██ ██   ██  ██ ██       ██ ██    ██ ████   ██ ██       ██      ██      ██   ██ 
+██   ██ ██████  ██    ██ ██████    ███        ██ ██    ██ ██ ██  ██ ██   ███ ██      █████   ██████  
+██   ██ ██   ██ ██    ██ ██       ██ ██  ██   ██ ██    ██ ██  ██ ██ ██    ██ ██      ██      ██   ██ 
+██████  ██   ██  ██████  ██      ██   ██  █████   ██████  ██   ████  ██████  ███████ ███████ ██   ██ 
+                                                                                                     
+                                         SUPERVISOR MODE                                                             
+{Style.RESET_ALL}
+"""
+    print(banner)
+
+def print_main_menu():
+    menu = f"""
+{Fore.CYAN}{Style.BRIGHT}MENU UTAMA{Style.RESET_ALL}
+{Fore.YELLOW}
+1. AUTOMATION ALL ROLE
+2. HANDLE ROLE
+3. COPY ROLE
+4. MONITORING ROLE
+5. CLEAR DATA UTILITY
+0. Keluar{Style.RESET_ALL}
+"""
+    print(menu)
+
+def main_menu():
+    try:
+        while True:
+            clear_screen()
+            print_main_banner()
+            print_main_menu()
+            choice = input(f"{Fore.GREEN}Pilih menu: {Style.RESET_ALL}").strip()
+            if choice == '1':
+                run_script(range(1, 8))
+            elif choice == '2':
+                run_script()
+            elif choice == '3':
+                copy_data()
+            elif choice == '4':
+                monitoring()
+            elif choice == '5':
+                clear_data_utility()
+            elif choice == '0':
+                print(f"{Fore.RED}Keluar dari sistem...{Style.RESET_ALL}")
+                break
+            else:
+                print(f"{Fore.RED}Pilihan tidak valid!{Style.RESET_ALL}")
+            input(f"\n{Fore.BLUE}Tekan Enter untuk kembali ke menu utama...{Style.RESET_ALL}")
+    except KeyboardInterrupt:
+        print(f"\n{Fore.RED}Program dihentikan .{Style.RESET_ALL}")
+        exit(0)
+
+if __name__ == '__main__':
+    main_menu()
