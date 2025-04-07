@@ -42,7 +42,7 @@ def extract_spreadsheet_id(url):
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 # Dapatkan direktori script saat ini (misal: DROPXJUNGLER/reshareshing)
-script_dir = os.path.dirname(os.path.realpath(_file_))
+script_dir = os.path.dirname(os.path.realpath(__file__))
 
 # Dapatkan direktori induk, yaitu folder DROPXJUNGLER
 parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
