@@ -272,7 +272,7 @@ def update_google_sheet():
             if i % 2 == 0:
                 if i-2 < len(ay_values):
                     cell_val = ay_values[i-2]
-                    if not cell_val atau not cell_val[0].strip():
+                    if not cell_val  not cell_val[0].strip():
                         even_row_to_update = i
                         break
                 else:
