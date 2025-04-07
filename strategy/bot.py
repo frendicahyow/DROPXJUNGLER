@@ -19,13 +19,14 @@ def tampilkan_logo():
     logo = dedent(rf"""{WHITE}
 
 
-██████  ██████   ██████  ██████  ██   ██      ██ ██    ██ ███    ██  ██████  ██      ███████ ██████      
-██   ██ ██   ██ ██    ██ ██   ██  ██ ██       ██ ██    ██ ████   ██ ██       ██      ██      ██   ██     
-██   ██ ██████  ██    ██ ██████    ███        ██ ██    ██ ██ ██  ██ ██   ███ ██      █████   ██████      
-██   ██ ██   ██ ██    ██ ██       ██ ██  ██   ██ ██    ██ ██  ██ ██ ██    ██ ██      ██      ██   ██     
-██████  ██   ██  ██████  ██      ██   ██  █████   ██████  ██   ████  ██████  ███████ ███████ ██   ██     
-                                                                                                         
-                                           STRATEGY TOOLS                                                               
+
+██████  ██████   ██████  ██████  ██   ██      ██ ██    ██ ███    ██  ██████  ██      ███████
+██   ██ ██   ██ ██    ██ ██   ██  ██ ██       ██ ██    ██ ████   ██ ██       ██      ██   ██     
+██   ██ ██████  ██    ██ ██████    ███        ██ ██    ██ ██ ██  ██ ██   ███ ██      █████   
+██   ██ ██   ██ ██    ██ ██       ██ ██  ██   ██ ██    ██ ██  ██ ██ ██    ██ ██      ██   ██     
+██████  ██   ██  ██████  ██      ██   ██  █████   ██████  ██   ████  ██████  ███████ ██
+                                                                                                      
+                                            STRATEGY TOOLS                                                               
 
 
 {RESET}""")
@@ -78,7 +79,7 @@ def display_steps():
         "9": "Trade",
         "10": "Check in",
         "11": "Tugas Twitter",
-        "12": "Tugas Telegramy",
+        "12": "Tugas Telegram",
         "13": "Push role Discord",
         "14": "node testnet"
     }
@@ -140,32 +141,31 @@ def send_to_sheets(record, sheet_name):
         print("❌ Spreadsheet ID tidak ditemukan.")
         return
 
-    from google.oauth2 import service_account
-    from googleapiclient.discovery import build
-# Inisialisasi Google Sheets API
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+    # Inisialisasi Google Sheets API
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-# Dapatkan direktori script saat ini 
-script_dir = os.path.dirname(os.path.realpath(__file__))
+    # Dapatkan direktori script saat ini 
+    script_dir = os.path.dirname(os.path.realpath(__file__))
 
-# Dapatkan direktori induk, yaitu folder DROPXJUNGLER
-parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
+    # Dapatkan direktori induk, yaitu folder DROPXJUNGLER
+    parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
 
-# Susun path lengkap ke file credentials.json di folder induk
-credentials_path = os.path.join(parent_dir, 'credentials.json')
+    # Susun path lengkap ke file credentials.json di folder induk
+    credentials_path = os.path.join(parent_dir, 'credentials.json')
 
-# Muat kredensial dari file di folder induk
-creds = service_account.Credentials.from_service_account_file(
-    credentials_path, scopes=SCOPES)
-sheets_service = build('sheets', 'v4', credentials=creds)
+    # Muat kredensial dari file di folder induk
+    creds = service_account.Credentials.from_service_account_file(
+        credentials_path, scopes=SCOPES)
+    sheets_service = build('sheets', 'v4', credentials=creds)
 
     header_list = ["Timestamp", "Nama Airdrop", "StepbyStep", "Feedback"]
+    sheet = sheets_service.spreadsheets().values()
     header_range = f"{sheet_name}!A1:D1"
-    result = sheet.values().get(spreadsheetId=spreadsheet_id, range=header_range).execute()
+    result = sheet.get(spreadsheetId=spreadsheet_id, range=header_range).execute()
     values = result.get("values", [])
     if not values or values[0] != header_list:
         body = {"values": [header_list]}
-        sheet.values().update(
+        sheet.update(
             spreadsheetId=spreadsheet_id,
             range=header_range,
             valueInputOption="USER_ENTERED",
@@ -175,14 +175,14 @@ sheets_service = build('sheets', 'v4', credentials=creds)
         data_count = 0
     else:
         data_range = f"{sheet_name}!A2:A"
-        result = sheet.values().get(spreadsheetId=spreadsheet_id, range=data_range).execute()
+        result = sheet.get(spreadsheetId=spreadsheet_id, range=data_range).execute()
         values = result.get("values", [])
         data_count = len([row for row in values if row and row[0].strip() != ""])
-    
+
     next_data_row = 2 * (data_count + 1)
     update_range = f"{sheet_name}!A{next_data_row}:D{next_data_row}"
     body_data = {"values": [record]}
-    sheet.values().update(
+    sheet.update(
         spreadsheetId=spreadsheet_id,
         range=update_range,
         valueInputOption="USER_ENTERED",
@@ -192,7 +192,7 @@ sheets_service = build('sheets', 'v4', credentials=creds)
 
     marker_range = f"{sheet_name}!Y{next_data_row}:Y{next_data_row}"
     body_marker = {"values": [["M"]]}
-    sheet.values().update(
+    sheet.update(
         spreadsheetId=spreadsheet_id,
         range=marker_range,
         valueInputOption="USER_ENTERED",
