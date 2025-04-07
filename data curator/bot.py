@@ -1,10 +1,10 @@
+import os
 import re
 import requests
 import shutil
 import time
 import math
 import threading
-import os  # Tambahkan import os
 from sys import stdout, stderr
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
@@ -55,7 +55,7 @@ ascii_art = r"""
 ██║  ██║ ██╔██╗ ██   ██║
 ██████╔╝██╔╝ ██╗╚█████╔╝
 ╚═════╝ ╚═╝  ╚═╝ ╚════╝ 
-       DROPXJUNGLER
+      DROPXJUNGLER
 """
 
 def scale_ascii_art(art, max_width):
@@ -165,15 +165,13 @@ def update_google_sheet():
         SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
         script_dir = os.path.dirname(os.path.realpath(__file__))
-
         parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
-
         credentials_path = os.path.join(parent_dir, 'credentials.json')
 
         creds = service_account.Credentials.from_service_account_file(
             credentials_path, scopes=SCOPES)
         sheets_service = build('sheets', 'v4', credentials=creds)
-    
+        
         def read_source_ids(filename):
             source_ids = []
             with open(filename, 'r') as f:
@@ -189,12 +187,15 @@ def update_google_sheet():
         def remove_columns_yz(row):
             return [cell for idx, cell in enumerate(row) if idx not in (24, 25)]
         
+        # Baca semua ID sumber dari file copyid.txt
         source_spreadsheet_ids = read_source_ids('copyid.txt')
-
+        # Baca ID spreadsheet tujuan dari file datacuratorid.txt
         destination_spreadsheet_id = read_config_value('datacuratorid.txt')
+        # Gunakan sheet tujuan dengan nama "Datacurator"
         destination_sheet_name = "Datacurator"
         
-        header_range = f"{destination_sheet_name}!A1:{chr(64+20)}1"
+        # Periksa apakah header sudah ada di sheet tujuan; jika tidak, ambil header dari sumber pertama
+        header_range = f"{destination_sheet_name}!A1:{chr(64+20)}1"  # Asumsi maksimal 20 kolom
         try:
             result = sheets_service.spreadsheets().values().get(
                 spreadsheetId=destination_spreadsheet_id,
@@ -213,7 +214,7 @@ def update_google_sheet():
             ).execute()
             header = result.get('values', [[]])[0]
             if not header:
-                header = ["Kolom1", "Kolom2", "Kolom3"]
+                header = ["Kolom1", "Kolom2", "Kolom3"]  # Ganti sesuai kebutuhan
             body = {'values': [header]}
             sheets_service.spreadsheets().values().update(
                 spreadsheetId=destination_spreadsheet_id,
@@ -223,7 +224,7 @@ def update_google_sheet():
             ).execute()
         
         all_data = []
-
+        # Ambil data dari setiap spreadsheet sumber (lewati baris header)
         for src_id in source_spreadsheet_ids:
             try:
                 metadata = sheets_service.spreadsheets().get(spreadsheetId=src_id).execute()
@@ -240,11 +241,13 @@ def update_google_sheet():
                 for row in data_rows:
                     processed_row = remove_columns_yz(row)
                     all_data.append(processed_row)
+                # Sisipkan 3 baris kosong sebagai pemisah antar sumber
                 for _ in range(3):
                     all_data.append([])
             except Exception as e:
                 continue
         
+        # Append data baru ke sheet tujuan sehingga data yang lama tetap terjaga
         dest_range = f"{destination_sheet_name}!A2"
         body = {'values': all_data}
         sheets_service.spreadsheets().values().append(
@@ -255,30 +258,35 @@ def update_google_sheet():
             body=body
         ).execute()
         
+        # Ambil total baris di sheet tujuan (kolom A)
         result_rows = sheets_service.spreadsheets().values().get(
             spreadsheetId=destination_spreadsheet_id,
             range=f"{destination_sheet_name}!A:A"
         ).execute()
         total_rows = len(result_rows.get('values', []))
         
+        # Dapatkan nilai kolom AY dari baris 2 hingga total_rows
         result_ay = sheets_service.spreadsheets().values().get(
             spreadsheetId=destination_spreadsheet_id,
             range=f"{destination_sheet_name}!AY2:AY{total_rows}"
         ).execute()
         ay_values = result_ay.get('values', [])
         
+        # Cari baris genap pertama yang kosong di kolom AY
         even_row_to_update = None
         for i in range(2, total_rows+1):
             if i % 2 == 0:
+                # indeks untuk ay_values adalah i-2
                 if i-2 < len(ay_values):
                     cell_val = ay_values[i-2]
-                    if not cell_val  not cell_val[0].strip():
+                    if not cell_val or not cell_val[0].strip():
                         even_row_to_update = i
                         break
                 else:
                     even_row_to_update = i
                     break
         if even_row_to_update is None:
+            # Jika semua baris genap terisi, gunakan baris genap baru di bawah total_rows
             next_even = total_rows + 1 if (total_rows + 1) % 2 == 0 else total_rows + 2
             even_row_to_update = next_even
         
