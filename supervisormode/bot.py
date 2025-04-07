@@ -19,8 +19,22 @@ BASE_DIR = os.path.expanduser("~/DROPXJUNGLER")
 # Untuk opsi 3,4,5, file pendukung berada di direktori script (misalnya supervisormode)
 LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Inisialisasi Google Sheets API
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, 'credentials.json')
+
+# Dapatkan direktori script saat ini (misal: DROPXJUNGLER/reshareshing)
+script_dir = os.path.dirname(os.path.realpath(_file_))
+
+# Dapatkan direktori induk, yaitu folder DROPXJUNGLER
+parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
+
+# Susun path lengkap ke file credentials.json di folder induk
+credentials_path = os.path.join(parent_dir, 'credentials.json')
+
+# Muat kredensial dari file di folder induk
+creds = service_account.Credentials.from_service_account_file(
+    credentials_path, scopes=SCOPES)
+sheets_service = build('sheets', 'v4', credentials=creds)
 
 # ----------------------------------------------------
 # BAGIAN 1 & 2: Opsi 1 dan 2 (tidak diubah)
