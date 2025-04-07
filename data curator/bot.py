@@ -5,7 +5,7 @@ import shutil
 import time
 import math
 import threading
-from sys import stdout, stderr
+from sys import stdout, stderr, exit
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 
@@ -151,19 +151,57 @@ def read_config_value(filename):
     with open(filename, 'r') as f:
         return f.read().strip()
 
-# Baca konfigurasi Telegram dari file
-TELEGRAM_BOT_TOKEN = read_config_value('token.txt')
-TELEGRAM_CHAT_ID = read_config_value('idchat.txt')
-try:
-    THREADS_ID = int(read_config_value('threads.txt'))
-except ValueError:
+def check_config_file(filepath, description):
+    """Periksa apakah file ada dan tidak kosong, jika kosong tampilkan pesan error di terminal."""
+    if not os.path.exists(filepath):
+        print(f"{description} ({filepath}) tidak ditemukan!")
+        exit(1)
+    content = read_config_value(filepath)
+    if not content:
+        print(f"{description} ({filepath}) kosong. Mohon isi file tersebut.")
+        exit(1)
+    return content
+
+# --- Validasi File Konfigurasi ---
+# File konfigurasi utama yang harus ada dan tidak kosong:
+TELEGRAM_BOT_TOKEN = check_config_file('token.txt', "Token Bot Telegram")
+TELEGRAM_CHAT_ID = check_config_file('idchat.txt', "ID Chat Telegram")
+# threads.txt bersifat opsional, jadi jika kosong tidak akan menghentikan eksekusi
+threads_val = ""
+if os.path.exists('threads.txt'):
+    threads_val = read_config_value('threads.txt')
+if threads_val:
+    try:
+        THREADS_ID = int(threads_val)
+    except ValueError:
+        THREADS_ID = None
+else:
     THREADS_ID = None
+# Validasi file untuk ID spreadsheet tujuan dan sumber
+destination_spreadsheet_id = check_config_file('datacuratorid.txt', "ID Spreadsheet Tujuan (datacuratorid.txt)")
+# File copyid.txt berisi daftar ID spreadsheet sumber
+# Validasi akan dilakukan di fungsi update_google_sheet, tapi di sini bisa kita cek eksistensinya
+if not os.path.exists('copyid.txt'):
+    print("File copyid.txt tidak ditemukan! Mohon buat file tersebut dengan format: 'NamaSumber: spreadsheet_id'")
+    exit(1)
+# Validasi file credentials.json
+# Asumsikan file credentials.json berada di direktori induk
+script_dir = os.path.dirname(os.path.realpath(__file__))
+parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
+credentials_path = os.path.join(parent_dir, 'credentials.json')
+if not os.path.exists(credentials_path):
+    print(f"File credentials.json tidak ditemukan di {credentials_path}! Mohon tempatkan file tersebut.")
+    exit(1)
+if not read_config_value(credentials_path):
+    print(f"File credentials.json kosong! Mohon isi file tersebut dengan kredensial yang valid.")
+    exit(1)
 
 def update_google_sheet():
     global gsheet_status, gsheet_link
     try:
         SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
+        # Peroleh path credentials.json dari direktori induk
         script_dir = os.path.dirname(os.path.realpath(__file__))
         parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
         credentials_path = os.path.join(parent_dir, 'credentials.json')
@@ -189,13 +227,14 @@ def update_google_sheet():
         
         # Baca semua ID sumber dari file copyid.txt
         source_spreadsheet_ids = read_source_ids('copyid.txt')
-        # Baca ID spreadsheet tujuan dari file datacuratorid.txt
-        destination_spreadsheet_id = read_config_value('datacuratorid.txt')
-        # Gunakan sheet tujuan dengan nama "Datacurator"
+        if not source_spreadsheet_ids:
+            raise Exception("File copyid.txt kosong. Mohon isi file tersebut dengan ID spreadsheet yang valid.")
+        
+        # Gunakan ID spreadsheet tujuan dari file datacuratorid.txt (sudah divalidasi)
         destination_sheet_name = "Datacurator"
         
         # Periksa apakah header sudah ada di sheet tujuan; jika tidak, ambil header dari sumber pertama
-        header_range = f"{destination_sheet_name}!A1:{chr(64+20)}1"  # Asumsi maksimal 20 kolom
+        header_range = f"{destination_spreadsheet_id}!A1:{chr(64+20)}1"  # Asumsi maksimal 20 kolom
         try:
             result = sheets_service.spreadsheets().values().get(
                 spreadsheetId=destination_spreadsheet_id,
@@ -324,6 +363,7 @@ def send_telegram_message():
         telegram_status = f"Telegram: Failed ({e})"
 
 if __name__ == "__main__":
+    # Jalankan fungsi update_google_sheet dan pengiriman pesan Telegram secara terpisah
     thread_gs = threading.Thread(target=update_google_sheet)
     thread_tg = threading.Thread(target=send_telegram_message)
     thread_gs.start()
