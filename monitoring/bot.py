@@ -91,10 +91,22 @@ thread_ids = [int(line.strip()) for line in threads_text.splitlines()] if thread
 # GOOGLE SHEETS API
 ########################################
 
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-SERVICE_ACCOUNT_FILE = "credentials.json"
-creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-sheets_service = build("sheets", "v4", credentials=creds)
+# Inisialisasi Google Sheets API
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+
+# Dapatkan direktori script saat ini (misal: DROPXJUNGLER/reshareshing)
+script_dir = os.path.dirname(os.path.realpath(_file_))
+
+# Dapatkan direktori induk, yaitu folder DROPXJUNGLER
+parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
+
+# Susun path lengkap ke file credentials.json di folder induk
+credentials_path = os.path.join(parent_dir, 'credentials.json')
+
+# Muat kredensial dari file di folder induk
+creds = service_account.Credentials.from_service_account_file(
+    credentials_path, scopes=SCOPES)
+sheets_service = build('sheets', 'v4', credentials=creds)
 
 ########################################
 # HEADER MANAGEMENT
