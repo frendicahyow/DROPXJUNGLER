@@ -17,10 +17,10 @@ def tampilkan_logo():
     logo = f"""{WHITE}
 ██████  ██████   ██████  ██████  ██   ██      ██ ██    ██ ███    ██  ██████  ██      ███████ ██████      
 ██   ██ ██   ██ ██    ██ ██   ██  ██ ██       ██ ██    ██ ████   ██ ██       ██      ██      ██   ██     
-██   ██ ██████  ██    ██ ██████    ███        ██ ██    ██ ██ ██  ██ ██   ███ ██      █████   ██████      
+██   ██ ██████  ██    ██ ██████    ███        ██ ██    ██ ██ ██  ██ ██   ███ ██      █████   ██████         
 ██   ██ ██   ██ ██    ██ ██       ██ ██  ██   ██ ██    ██ ██  ██ ██ ██    ██ ██      ██      ██   ██     
 ██████  ██   ██  ██████  ██      ██   ██  █████   ██████  ██   ████  ██████  ███████ ███████ ██   ██     
-                                                                                                         
+
                                            SCRIPT TOOLS  
 {RESET}"""
     print(logo)
@@ -30,6 +30,9 @@ def tampilkan_logo():
 ########################################
 def read_file(filename):
     """Baca file dan kembalikan isinya (strip spasi)."""
+    if not os.path.exists(filename):
+        print(f"{BLUE}❌ File {filename} tidak ditemukan.{RESET}")
+        return None
     try:
         with open(filename, 'r') as f:
             return f.read().strip()
@@ -42,18 +45,19 @@ def extract_spreadsheet_id(link):
     return match.group(1) if match else link.strip()
 
 def load_config():
-    with open('token.txt', 'r') as f:
-        telegram_token = f.read().strip()
-    with open('idchat.txt', 'r') as f:
-        telegram_chat_id = f.read().strip()
-    with open('linkgs.txt', 'r') as f:
-        spreadsheet_id = extract_spreadsheet_id(f.read().strip())
     try:
+        with open('token.txt', 'r') as f:
+            telegram_token = f.read().strip()
+        with open('idchat.txt', 'r') as f:
+            telegram_chat_id = f.read().strip()
+        with open('linkgs.txt', 'r') as f:
+            spreadsheet_id = extract_spreadsheet_id(f.read().strip())
         with open('threads.txt', 'r') as f:
             thread_text = f.read().strip()
             thread_id = int(thread_text) if thread_text.isdigit() else None
-    except Exception:
-        thread_id = None
+    except Exception as e:
+        print(f"{BLUE}❌ Gagal memuat konfigurasi: {e}{RESET}")
+        telegram_token, telegram_chat_id, spreadsheet_id, thread_id = None, None, None, None
     return telegram_token, telegram_chat_id, spreadsheet_id, thread_id
 
 TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, SPREADSHEET_ID, THREAD_ID = load_config()
@@ -62,6 +66,9 @@ TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, SPREADSHEET_ID, THREAD_ID = load_config()
 # TELEGRAM PENGIRIMAN
 ########################################
 def send_to_telegram(message, thread_id=None):
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        print(f"{BLUE}❌ Token atau Chat ID Telegram tidak ditemukan.{RESET}")
+        return
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
@@ -70,32 +77,35 @@ def send_to_telegram(message, thread_id=None):
     }
     if thread_id is not None:
         payload["message_thread_id"] = thread_id
-    response = requests.post(url, json=payload)
-    if response.status_code == 200:
-        print(f"{BLUE}✅ Data berhasil dikirim ke Telegram.{RESET}")
-    else:
-        print(f"{BLUE}❌ Gagal mengirim data ke Telegram: {response.text}{RESET}")
+    try:
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            print(f"{BLUE}✅ Data berhasil dikirim ke Telegram.{RESET}")
+        else:
+            print(f"{BLUE}❌ Gagal mengirim data ke Telegram: {response.text}{RESET}")
+    except Exception as e:
+        print(f"{BLUE}❌ Kesalahan saat mengirim ke Telegram: {e}{RESET}")
 
 ########################################
 # GOOGLE SHEETS PENGIRIMAN
 ########################################
 def build_sheets_service():
-  # Inisialisasi Google Sheets API
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-
-# Dapatkan direktori script saat ini (misal: DROPXJUNGLER/reshareshing)
-script_dir = os.path.dirname(os.path.realpath(__file__))
-
-# Dapatkan direktori induk, yaitu folder DROPXJUNGLER
-parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
-
-# Susun path lengkap ke file credentials.json di folder induk
-credentials_path = os.path.join(parent_dir, 'credentials.json')
-
-# Muat kredensial dari file di folder induk
-creds = service_account.Credentials.from_service_account_file(
-    credentials_path, scopes=SCOPES)
-sheets_service = build('sheets', 'v4', credentials=creds) 
+    # Inisialisasi Google Sheets API
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+    
+    # Dapatkan direktori script saat ini (misal: DROPXJUNGLER/reshareshing)
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    
+    # Dapatkan direktori induk, yaitu folder DROPXJUNGLER
+    parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
+    
+    # Susun path lengkap ke file credentials.json di folder induk
+    credentials_path = os.path.join(parent_dir, 'credentials.json')
+    
+    # Muat kredensial dari file di folder induk
+    creds = service_account.Credentials.from_service_account_file(
+        credentials_path, scopes=SCOPES)
+    return build('sheets', 'v4', credentials=creds)
 
 def send_to_sheets(record, sheet_name):
     """
@@ -104,9 +114,8 @@ def send_to_sheets(record, sheet_name):
     Data baru ditulis pada baris genap (misalnya, A2:C2, A4:C4, dst.)
     Marker "M" ditambahkan di kolom Y.
     """
-    # Gunakan SPREADSHEET_ID dari konfigurasi
     if not SPREADSHEET_ID:
-        print("❌ Spreadsheet ID tidak ditemukan.")
+        print(f"{BLUE}❌ Spreadsheet ID tidak ditemukan.{RESET}")
         return
 
     service = build_sheets_service()
@@ -161,6 +170,9 @@ def send_to_sheets(record, sheet_name):
 # NOTIFIKASI TELEGRAM DENGAN LINK SPREADSHEET
 ########################################
 def notify_update():
+    if not SPREADSHEET_ID:
+        print(f"{BLUE}❌ Spreadsheet ID tidak ditemukan untuk mengirim notifikasi.{RESET}")
+        return
     # Buat link lengkap ke spreadsheet
     spreadsheet_link = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}"
     message = f"Siap sabar bolo, link spreadsheet: <a href='{spreadsheet_link}'>Klik di sini</a>"
@@ -172,8 +184,14 @@ def notify_update():
 def process_sheet():
     try:
         tampilkan_logo()
-        script_name = input(f"{BLUE}Masukkan nama script: {RESET}")
-        github_link = input(f"{BLUE}Masukkan link GitHub: {RESET}")
+        script_name = input(f"{BLUE}Masukkan nama script: {RESET}").strip()
+        if not script_name:
+            print(f"{BLUE}❌ Nama script tidak boleh kosong.{RESET}")
+            return
+        github_link = input(f"{BLUE}Masukkan link GitHub: {RESET}").strip()
+        if not github_link:
+            print(f"{BLUE}❌ Link GitHub tidak boleh kosong.{RESET}")
+            return
         now = datetime.datetime.now().strftime("%H:%M:%S %d/%m/%Y")
         record = [now, script_name, github_link]
 
@@ -181,7 +199,7 @@ def process_sheet():
         notify_update()
 
     except Exception as e:
-        print(f"ERROR: {str(e)}")
+        print(f"{BLUE}❌ ERROR: {str(e)}{RESET}")
 
 if __name__ == '__main__':
     try:
