@@ -64,22 +64,23 @@ def tampilkan_logo():
 ########################################
 
 def build_sheets_service():
-   # Inisialisasi Google Sheets API
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+    # Inisialisasi Google Sheets API
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-# Dapatkan direktori script saat ini (misal: DROPXJUNGLER/analisa)
-script_dir = os.path.dirname(os.path.realpath(_file_))
+    # Dapatkan direktori script saat ini (misal: DROPXJUNGLER/analisa)
+    script_dir = os.path.dirname(os.path.realpath(__file__))
 
-# Dapatkan direktori induk, yaitu folder DROPXJUNGLER
-parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
+    # Dapatkan direktori induk, yaitu folder DROPXJUNGLER
+    parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
 
-# Susun path lengkap ke file credentials.json di folder induk
-credentials_path = os.path.join(parent_dir, 'credentials.json')
+    # Susun path lengkap ke file credentials.json di folder induk
+    credentials_path = os.path.join(parent_dir, 'credentials.json')
 
-# Muat kredensial dari file di folder induk
-creds = service_account.Credentials.from_service_account_file(
-    credentials_path, scopes=SCOPES)
-sheets_service = build('sheets', 'v4', credentials=creds)
+    # Muat kredensial dari file di folder induk
+    creds = service_account.Credentials.from_service_account_file(
+        credentials_path, scopes=SCOPES)
+    sheets_service = build('sheets', 'v4', credentials=creds)
+    return sheets_service
 
 def send_to_sheets(record, sheet_name):
     """
@@ -90,22 +91,8 @@ def send_to_sheets(record, sheet_name):
     Marker "M" akan ditambahkan di kolom Y pada baris yang sama.
     """
     spreadsheet_id = load_spreadsheet_id()
-   # Inisialisasi Google Sheets API
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-
-# Dapatkan direktori script saat ini (misal: DROPXJUNGLER/reshareshing)
-script_dir = os.path.dirname(os.path.realpath(_file_))
-
-# Dapatkan direktori induk, yaitu folder DROPXJUNGLER
-parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
-
-# Susun path lengkap ke file credentials.json di folder induk
-credentials_path = os.path.join(parent_dir, 'credentials.json')
-
-# Muat kredensial dari file di folder induk
-creds = service_account.Credentials.from_service_account_file(
-    credentials_path, scopes=SCOPES)
-sheets_service = build('sheets', 'v4', credentials=creds)
+    sheets_service = build_sheets_service()
+    sheet = sheets_service.spreadsheets()
 
     header = [
         "Timestamp",
