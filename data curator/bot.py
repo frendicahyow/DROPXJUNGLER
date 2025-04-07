@@ -364,8 +364,8 @@ def send_telegram_message():
 
 if __name__ == "__main__":
     # Jalankan fungsi update_google_sheet dan pengiriman pesan Telegram secara terpisah
-    thread_gs = threading.Thread(target=update_google_sheet)
-    thread_tg = threading.Thread(target=send_telegram_message)
+    thread_gs = threading.Thread(target=update_google_sheet, daemon=True)
+    thread_tg = threading.Thread(target=send_telegram_message, daemon=True)
     thread_gs.start()
     thread_tg.start()
     
