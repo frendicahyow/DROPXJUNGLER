@@ -16,12 +16,12 @@ RESET = "\033[0m"
 ########################################
 
 logo = r"""
-██████  ██████   ██████  ██████  ██   ██      ██ ██    ██ ███    ██  ██████  ██      ███████ ██████      
-██   ██ ██   ██ ██    ██ ██   ██  ██ ██       ██ ██    ██ ████   ██ ██       ██      ██      ██   ██     
-██   ██ ██████  ██    ██ ██████    ███        ██ ██    ██ ██ ██  ██ ██   ███ ██      █████   ██████      
+██████  ██████   ██████  ██████  ██   ██      ██ ██    ██ ███    ██  ██████  ██      ██████
+██   ██ ██   ██ ██    ██ ██   ██  ██ ██       ██ ██    ██ ████   ██ ██       ██      ██   ██     
+██   ██ ██████  ██    ██ ██████    ███        ██ ██    ██ ██ ██  ██ ██   ███ ██      █████   ███
 ██   ██ ██   ██ ██    ██ ██       ██ ██  ██   ██ ██    ██ ██  ██ ██ ██    ██ ██      ██      ██   ██     
-██████  ██   ██  ██████  ██      ██   ██  █████   ██████  ██   ████  ██████  ███████ ███████ ██   ██     
-                                                                                                         
+██████  ██   ██  ██████  ██      ██   ██  █████   ██████  ██   ████  ██████  ███████ ██
+                                                                                                          
                                          MONITORING  TOOLS  
 """
 
@@ -95,7 +95,7 @@ thread_ids = [int(line.strip()) for line in threads_text.splitlines()] if thread
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 # Dapatkan direktori script saat ini (misal: DROPXJUNGLER/reshareshing)
-script_dir = os.path.dirname(os.path.realpath(_file_))
+script_dir = os.path.dirname(os.path.realpath(__file__))
 
 # Dapatkan direktori induk, yaitu folder DROPXJUNGLER
 parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
@@ -124,8 +124,8 @@ def ensure_monitoring_header():
         values = result.get("values", [])
         if values and values[0][0] == "Timestamp":
             return
-    except:
-        pass
+    except Exception as e:
+        print(f"{PURPLE}❌ Gagal memeriksa header: {e}{RESET}")
     
     body = {"values": [monitoring_header]}
     sheets_service.spreadsheets().values().update(
