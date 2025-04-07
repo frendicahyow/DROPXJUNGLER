@@ -5,7 +5,6 @@ import datetime
 import os
 import requests
 from textwrap import dedent
-
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from telegram import Bot
@@ -38,12 +37,10 @@ def extract_spreadsheet_id(url):
 # ====================================================
 # INISIALISASI GOOGLE SHEETS API
 # ====================================================
-
-# Inisialisasi Google Sheets API
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-# Dapatkan direktori script saat ini (misal: DROPXJUNGLER/reshareshing)
-script_dir = os.path.dirname(os.path.realpath(_file_))
+# Dapatkan direktori script saat ini (misal: DROPXJUNGLER/moderator)
+script_dir = os.path.dirname(os.path.realpath(__file__))
 
 # Dapatkan direktori induk, yaitu folder DROPXJUNGLER
 parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
@@ -372,13 +369,13 @@ async def update_list():
 def tampilkan_menu():
     print(dedent(f"""
     {WHITE}
-██████  ██████   ██████  ██████  ██   ██      ██ ██    ██ ███    ██  ██████  ██      ███████ ██████      
-██   ██ ██   ██ ██    ██ ██   ██  ██ ██       ██ ██    ██ ████   ██ ██       ██      ██      ██   ██     
-██   ██ ██████  ██    ██ ██████    ███        ██ ██    ██ ██ ██  ██ ██   ███ ██      █████   ██████      
-██   ██ ██   ██ ██    ██ ██       ██ ██  ██   ██ ██    ██ ██  ██ ██ ██    ██ ██      ██      ██   ██     
-██████  ██   ██  ██████  ██      ██   ██  █████   ██████  ██   ████  ██████  ███████ ███████ ██   ██     
-                                                                                                         
-                                           MODERATOR TOOLS                                                                
+    ██████  ██████   ██████  ██████  ██   ██      ██ ██    ██ ███    ██  ██████  ██      ███████ 
+    ██   ██ ██   ██ ██    ██ ██   ██  ██ ██       ██ ██    ██ ████   ██ ██       ██      ██   ██     
+    ██   ██ ██████  ██    ██ ██████    ███        ██ ██    ██ ██ ██  ██ ██   ███ ██      █████   
+    ██   ██ ██   ██ ██    ██ ██       ██ ██  ██   ██ ██    ██ ██  ██ ██ ██    ██ ██      ██   ██     
+    ██████  ██   ██  ██████  ██      ██   ██  █████   ██████  ██   ████  ██████  ███████ ██ 
+                                                                                                      
+                                            MODERATOR TOOLS                                                                
     {RESET}
     {YELLOW}1.{RESET} Input Data Moderator
     {YELLOW}2.{RESET} Update List Airdrop
@@ -413,13 +410,4 @@ async def main_menu():
             print(f"{GREEN}👋 Sampai jumpa!{RESET}")
             sys.exit()
         else:
-            print(f"{RED}⚠ Pilihan tidak valid!{RESET}")
-            await asyncio.sleep(1)
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main_menu())
-    except KeyboardInterrupt:
-        print(f"\n{RED}🚫 Program dihentikan paksa!{RESET}")
-    except Exception as e:
-        print(f"{RED}💥 Error tidak terduga: {str(e)}{RESET}")
+            print(f"{RED}⚠ Pilihan tidak valid
