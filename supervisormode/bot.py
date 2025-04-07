@@ -14,12 +14,13 @@ init(autoreset=True)
 # ====================================================
 # KONFIGURASI GLOBAL
 # ====================================================
-# Untuk opsi 1 & 2, BASE_DIR tetap mengacu ke direktori ~/DropXJungler
+# Folder dasar untuk DROPXJUNGLER
 BASE_DIR = os.path.expanduser("~/DROPXJUNGLER")
-# Untuk opsi 3,4,5, file pendukung berada di direktori script (misalnya supervisormode)
+# File pendukung (misal: sheetid.txt, idsupervisor.txt) masih berada di folder script
 LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+# Credentials.json kini berada di folder DROPXJUNGLER
 SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, 'credentials.json')
 
 # ----------------------------------------------------
@@ -46,15 +47,15 @@ DISPLAY_NAMES = {
     8: '8. ProofWork (Tidak dijalankan otomatis)'
 }
 
-def get_credentials(dir_name):
-    creds_path = os.path.join(BASE_DIR, dir_name, 'credentials.json')
+def get_credentials():
+    creds_path = SERVICE_ACCOUNT_FILE
     scope = ['https://www.googleapis.com/auth/spreadsheets',
              'https://www.googleapis.com/auth/drive']
     try:
         creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
         return creds
     except Exception as e:
-        print(f"Error credentials di {dir_name}: {str(e)}")
+        print(f"Error credentials: {str(e)}")
         return None
 
 def run_script(numbers=None):
@@ -128,7 +129,7 @@ def print_header(title):
 
 def copy_data():
     creds = service_account.Credentials.from_service_account_file(
-        os.path.join(LOCAL_DIR, 'credentials.json'), scopes=SCOPES
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES
     )
     service = build('sheets', 'v4', credentials=creds)
     sheetid_mapping = read_sheet_ids(os.path.join(LOCAL_DIR, 'sheetid.txt'))
@@ -183,7 +184,7 @@ def print_monitoring_header():
 
 def get_service_local():
     creds = service_account.Credentials.from_service_account_file(
-        os.path.join(LOCAL_DIR, 'credentials.json'), scopes=SCOPES)
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES)
     return build('sheets', 'v4', credentials=creds)
 
 def get_supervisor_spreadsheet_id_monitor():
@@ -374,7 +375,7 @@ def print_clear_banner():
 def get_credentials_clear():
     try:
         creds = service_account.Credentials.from_service_account_file(
-            os.path.join(LOCAL_DIR, 'credentials.json'), scopes=SCOPES)
+            SERVICE_ACCOUNT_FILE, scopes=SCOPES)
         print(Fore.GREEN + "[INFO] Credentials berhasil didapatkan.")
         return creds
     except Exception as e:
