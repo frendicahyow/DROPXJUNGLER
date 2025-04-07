@@ -4,6 +4,7 @@ import shutil
 import time
 import math
 import threading
+import os  # Tambahkan import os
 from sys import stdout, stderr
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
@@ -54,7 +55,7 @@ ascii_art = r"""
 ██║  ██║ ██╔██╗ ██   ██║
 ██████╔╝██╔╝ ██╗╚█████╔╝
 ╚═════╝ ╚═╝  ╚═╝ ╚════╝ 
-      DROPXJUNGLER
+       DROPXJUNGLER
 """
 
 def scale_ascii_art(art, max_width):
@@ -158,30 +159,21 @@ try:
 except ValueError:
     THREADS_ID = None
 
-# Fungsi update_google_sheet: Gabungkan data dari semua sumber di file copyid.txt,
-# data baru akan di-append ke sheet tujuan ("Datacurator") tanpa menghapus data sebelumnya.
-# Setelah itu, dari baris 2 hingga total baris, hanya satu sel pada baris genap yang
-# belum terisi (atau kosong) akan diperbarui dengan "M" (satu "M" per jalankan skrip).
 def update_google_sheet():
     global gsheet_status, gsheet_link
     try:
-# Inisialisasi Google Sheets API
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+        SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-# Dapatkan direktori script saat ini (misal: DROPXJUNGLER/reshareshing)
-script_dir = os.path.dirname(os.path.realpath(_file_))
+        script_dir = os.path.dirname(os.path.realpath(__file__))
 
-# Dapatkan direktori induk, yaitu folder DROPXJUNGLER
-parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
+        parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
 
-# Susun path lengkap ke file credentials.json di folder induk
-credentials_path = os.path.join(parent_dir, 'credentials.json')
+        credentials_path = os.path.join(parent_dir, 'credentials.json')
 
-# Muat kredensial dari file di folder induk
-creds = service_account.Credentials.from_service_account_file(
-    credentials_path, scopes=SCOPES)
-sheets_service = build('sheets', 'v4', credentials=creds)
-  
+        creds = service_account.Credentials.from_service_account_file(
+            credentials_path, scopes=SCOPES)
+        sheets_service = build('sheets', 'v4', credentials=creds)
+    
         def read_source_ids(filename):
             source_ids = []
             with open(filename, 'r') as f:
@@ -197,17 +189,14 @@ sheets_service = build('sheets', 'v4', credentials=creds)
         def remove_columns_yz(row):
             return [cell for idx, cell in enumerate(row) if idx not in (24, 25)]
         
-        # Baca semua ID sumber dari file copyid.txt
         source_spreadsheet_ids = read_source_ids('copyid.txt')
-        # Baca ID spreadsheet tujuan dari file datacuratorid.txt
+
         destination_spreadsheet_id = read_config_value('datacuratorid.txt')
-        # Gunakan sheet tujuan dengan nama "Datacurator"
         destination_sheet_name = "Datacurator"
         
-        # Periksa apakah header sudah ada di sheet tujuan; jika tidak, ambil header dari sumber pertama
-        header_range = f"{destination_sheet_name}!A1:{chr(64+20)}1"  # Asumsi maksimal 20 kolom
+        header_range = f"{destination_sheet_name}!A1:{chr(64+20)}1"
         try:
-            result = service.spreadsheets().values().get(
+            result = sheets_service.spreadsheets().values().get(
                 spreadsheetId=destination_spreadsheet_id,
                 range=header_range
             ).execute()
@@ -216,17 +205,17 @@ sheets_service = build('sheets', 'v4', credentials=creds)
             existing_header = []
         if not existing_header:
             first_src_id = source_spreadsheet_ids[0]
-            metadata = service.spreadsheets().get(spreadsheetId=first_src_id).execute()
+            metadata = sheets_service.spreadsheets().get(spreadsheetId=first_src_id).execute()
             first_sheet_title = metadata['sheets'][0]['properties']['title']
-            result = service.spreadsheets().values().get(
+            result = sheets_service.spreadsheets().values().get(
                 spreadsheetId=first_src_id,
                 range=f"{first_sheet_title}!1:1"
             ).execute()
             header = result.get('values', [[]])[0]
             if not header:
-                header = ["Kolom1", "Kolom2", "Kolom3"]  # Ganti sesuai kebutuhan
+                header = ["Kolom1", "Kolom2", "Kolom3"]
             body = {'values': [header]}
-            service.spreadsheets().values().update(
+            sheets_service.spreadsheets().values().update(
                 spreadsheetId=destination_spreadsheet_id,
                 range=f"{destination_sheet_name}!A1:{chr(64+len(header))}1",
                 valueInputOption="RAW",
@@ -234,13 +223,13 @@ sheets_service = build('sheets', 'v4', credentials=creds)
             ).execute()
         
         all_data = []
-        # Ambil data dari setiap spreadsheet sumber (lewati baris header)
+
         for src_id in source_spreadsheet_ids:
             try:
-                metadata = service.spreadsheets().get(spreadsheetId=src_id).execute()
+                metadata = sheets_service.spreadsheets().get(spreadsheetId=src_id).execute()
                 sheet_title = metadata['sheets'][0]['properties']['title']
                 src_range = f"{sheet_title}"
-                result = service.spreadsheets().values().get(
+                result = sheets_service.spreadsheets().values().get(
                     spreadsheetId=src_id,
                     range=src_range
                 ).execute()
@@ -251,16 +240,14 @@ sheets_service = build('sheets', 'v4', credentials=creds)
                 for row in data_rows:
                     processed_row = remove_columns_yz(row)
                     all_data.append(processed_row)
-                # Sisipkan 3 baris kosong sebagai pemisah antar sumber
                 for _ in range(3):
                     all_data.append([])
             except Exception as e:
                 continue
         
-        # Append data baru ke sheet tujuan sehingga data yang lama tetap terjaga
         dest_range = f"{destination_sheet_name}!A2"
         body = {'values': all_data}
-        service.spreadsheets().values().append(
+        sheets_service.spreadsheets().values().append(
             spreadsheetId=destination_spreadsheet_id,
             range=dest_range,
             valueInputOption="RAW",
@@ -268,41 +255,36 @@ sheets_service = build('sheets', 'v4', credentials=creds)
             body=body
         ).execute()
         
-        # Ambil total baris di sheet tujuan (kolom A)
-        result_rows = service.spreadsheets().values().get(
+        result_rows = sheets_service.spreadsheets().values().get(
             spreadsheetId=destination_spreadsheet_id,
             range=f"{destination_sheet_name}!A:A"
         ).execute()
         total_rows = len(result_rows.get('values', []))
         
-        # Dapatkan nilai kolom AY dari baris 2 hingga total_rows
-        result_ay = service.spreadsheets().values().get(
+        result_ay = sheets_service.spreadsheets().values().get(
             spreadsheetId=destination_spreadsheet_id,
             range=f"{destination_sheet_name}!AY2:AY{total_rows}"
         ).execute()
         ay_values = result_ay.get('values', [])
         
-        # Cari baris genap pertama yang kosong di kolom AY
         even_row_to_update = None
         for i in range(2, total_rows+1):
             if i % 2 == 0:
-                # indeks untuk ay_values adalah i-2
                 if i-2 < len(ay_values):
                     cell_val = ay_values[i-2]
-                    if not cell_val or not cell_val[0].strip():
+                    if not cell_val atau not cell_val[0].strip():
                         even_row_to_update = i
                         break
                 else:
                     even_row_to_update = i
                     break
         if even_row_to_update is None:
-            # Jika semua baris genap terisi, gunakan baris genap baru di bawah total_rows
             next_even = total_rows + 1 if (total_rows + 1) % 2 == 0 else total_rows + 2
             even_row_to_update = next_even
         
         ay_range = f"{destination_sheet_name}!AY{even_row_to_update}"
         body = {'values': [["M"]]}
-        service.spreadsheets().values().update(
+        sheets_service.spreadsheets().values().update(
             spreadsheetId=destination_spreadsheet_id,
             range=ay_range,
             valueInputOption="RAW",
