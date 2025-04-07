@@ -142,11 +142,22 @@ def send_to_sheets(record, sheet_name):
 
     from google.oauth2 import service_account
     from googleapiclient.discovery import build
-    SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-    SERVICE_ACCOUNT_FILE = "credentials.json"
-    creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-    service = build("sheets", "v4", credentials=creds)
-    sheet = service.spreadsheets()
+# Inisialisasi Google Sheets API
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+
+# Dapatkan direktori script saat ini 
+script_dir = os.path.dirname(os.path.realpath(__file__))
+
+# Dapatkan direktori induk, yaitu folder DROPXJUNGLER
+parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
+
+# Susun path lengkap ke file credentials.json di folder induk
+credentials_path = os.path.join(parent_dir, 'credentials.json')
+
+# Muat kredensial dari file di folder induk
+creds = service_account.Credentials.from_service_account_file(
+    credentials_path, scopes=SCOPES)
+sheets_service = build('sheets', 'v4', credentials=creds)
 
     header_list = ["Timestamp", "Nama Airdrop", "StepbyStep", "Feedback"]
     header_range = f"{sheet_name}!A1:D1"
