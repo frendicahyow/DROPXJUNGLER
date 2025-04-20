@@ -123,7 +123,7 @@ def animate():
             status_tg_text = telegram_status
             status_tg_x = (term_width - len(status_tg_text)) // 2 + 1
             
-            thanks_text = "terimakasih♥"
+            thanks_text = "terimakasih"
             thanks_x = (term_width - len(thanks_text)) // 2 + 1
             
             buffer.append(f"\033[{info_y};{dc_x}H{datacurator_underlined}")
