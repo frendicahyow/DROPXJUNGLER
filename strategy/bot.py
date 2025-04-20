@@ -17,14 +17,14 @@ def tampilkan_logo():
     width = 80  # Lebar tampilan yang diinginkan
     # Gunakan raw string (r""") untuk menghindari escape sequence warning
     logo = dedent(rf"""{WHITE}
-   
-██████  ██████   ██████  ██████  ██   ██      ██ ██    ██ ███    ██  ██████  ██      ███████ ██████      
-██   ██ ██   ██ ██    ██ ██   ██  ██ ██       ██ ██    ██ ████   ██ ██       ██      ██      ██   ██     
-██   ██ ██████  ██    ██ ██████    ███        ██ ██    ██ ██ ██  ██ ██   ███ ██      █████   ██████         
-██   ██ ██   ██ ██    ██ ██       ██ ██  ██   ██ ██    ██ ██  ██ ██ ██    ██ ██      ██      ██   ██     
-██████  ██   ██  ██████  ██      ██   ██  █████   ██████  ██   ████  ██████  ███████ ███████ ██   ██     
 
-                                            STRATEGY TOOLS                                                               
+██████  ██████   ██████  ██████  ██   ██      ██ ██    ██ ███    ██  ██████  ██      ███████ ██████
+██   ██ ██   ██ ██    ██ ██   ██  ██ ██       ██ ██    ██ ████   ██ ██       ██      ██      ██   ██
+██   ██ ██████  ██    ██ ██████    ███        ██ ██    ██ ██ ██  ██ ██   ███ ██      █████   ██████
+██   ██ ██   ██ ██    ██ ██       ██ ██  ██   ██ ██    ██ ██  ██ ██ ██    ██ ██      ██      ██   ██
+██████  ██   ██  ██████  ██      ██   ██  █████   ██████  ██   ████  ██████  ███████ ███████ ██   ██
+
+                                            STRATEGY TOOLS
 
 
 {RESET}""")
@@ -81,7 +81,7 @@ def display_steps():
         "13": "Push role Discord",
         "14": "node testnet"
     }
-    print("📋 Langkah-Langkah Mengerjakan Tugas:")
+    print("📋 Langkah-Langkah Mengerjakan Tugas (Pilih Tipe Umum):") # Ubah teks header
     print("(Wajib otorisasi akun sosmed dan connect wallet blockchain)\n")
     for key in sorted(steps.keys(), key=lambda x: int(x)):
         print(f"[{key:>2}] {steps[key]}")
@@ -126,12 +126,14 @@ def send_to_telegram(message, bot_token, chat_id, thread_id=None):
 # GOOGLE SHEETS PENGIRIMAN
 ########################################
 
+# PERHATIAN: Fungsi ini perlu diubah untuk menampung kolom baru 'Deskripsi Langkah Spesifik'
+# Anda perlu menyesuaikan header_list, range, dan index kolom
 def send_to_sheets(record, sheet_name):
     """
     Mengirim data ke Google Sheets menggunakan Google Sheets API.
-    Record: list dengan 4 elemen [Timestamp, Nama Airdrop, StepbyStep, Feedback].
-    Header: ["Timestamp", "Nama Airdrop", "StepbyStep", "Feedback"]
-    Data baru ditulis pada baris genap (A2:D2, A4:D4, A6:D6, dst.)
+    Record: list dengan elemen sesuai header (sekarang 5 elemen jika ditambah Deskripsi).
+    Contoh Header yang diperbarui: ["Timestamp", "Nama Airdrop", "StepbyStep (Tipe)", "Deskripsi Langkah Spesifik", "Feedback"]
+    Data baru ditulis pada baris genap (A2:E2, A4:E4, dst.)
     Marker "M" akan ditambahkan di kolom Y pada baris yang sama.
     """
     spreadsheet_id = read_file("spreadsheet_id.txt")
@@ -142,8 +144,8 @@ def send_to_sheets(record, sheet_name):
     # Inisialisasi Google Sheets API
     SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-    # Dapatkan direktori script saat ini 
-    script_dir = os.path.dirname(os.path.realpath(__file__))
+    # Dapatkan direktori script saat ini
+    script_dir = os.path.dirname(os.path.realpath(_file_))
 
     # Dapatkan direktori induk, yaitu folder DROPXJUNGLER
     parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
@@ -151,52 +153,72 @@ def send_to_sheets(record, sheet_name):
     # Susun path lengkap ke file credentials.json di folder induk
     credentials_path = os.path.join(parent_dir, 'credentials.json')
 
-    # Muat kredensial dari file di folder induk
-    creds = service_account.Credentials.from_service_account_file(
-        credentials_path, scopes=SCOPES)
-    sheets_service = build('sheets', 'v4', credentials=creds)
+    try:
+        # Muat kredensial dari file di folder induk
+        creds = service_account.Credentials.from_service_account_file(
+            credentials_path, scopes=SCOPES)
+        sheets_service = build('sheets', 'v4', credentials=creds)
+    except Exception as e:
+        print(f"❌ Gagal memuat kredensial atau membuat service Sheets: {e}")
+        return
 
-    header_list = ["Timestamp", "Nama Airdrop", "StepbyStep", "Feedback"]
-    sheet = sheets_service.spreadsheets().values()
-    header_range = f"{sheet_name}!A1:D1"
-    result = sheet.get(spreadsheetId=spreadsheet_id, range=header_range).execute()
-    values = result.get("values", [])
-    if not values or values[0] != header_list:
-        body = {"values": [header_list]}
-        sheet.update(
-            spreadsheetId=spreadsheet_id,
-            range=header_range,
-            valueInputOption="USER_ENTERED",
-            body=body
-        ).execute()
-        print(BLUE + "Header berhasil ditulis di A1:D1." + RESET)
-        data_count = 0
-    else:
-        data_range = f"{sheet_name}!A2:A"
-        result = sheet.get(spreadsheetId=spreadsheet_id, range=data_range).execute()
+    # =====================================================================
+    # BAGIAN INI PERLU DIUBAH SESUAI DENGAN JUMLAH KOLOM BARU DI RECORD
+    # Contoh untuk 5 kolom: ["Timestamp", "Nama Airdrop", "StepbyStep (Tipe)", "Deskripsi Langkah Spesifik", "Feedback"]
+    header_list = ["Timestamp", "Nama Airdrop", "StepbyStep (Tipe)", "Deskripsi Langkah Spesifik", "Feedback"] # <-- PERBARUI INI
+    header_range = f"{sheet_name}!A1:E1" # <-- SESUAIKAN RANGE HEADER
+    # =====================================================================
+
+    try:
+        result = sheets_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=header_range).execute()
         values = result.get("values", [])
-        data_count = len([row for row in values if row and row[0].strip() != ""])
+        if not values or values[0] != header_list:
+            body = {"values": [header_list]}
+            sheets_service.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range=header_range,
+                valueInputOption="USER_ENTERED",
+                body=body
+            ).execute()
+            print(BLUE + f"Header berhasil ditulis/diperbarui di {header_range}." + RESET)
+            data_count = 0
+        else:
+            # Hitung jumlah baris data yang ada (berdasarkan kolom pertama A)
+            data_range = f"{sheet_name}!A2:A" # <-- Tetap A, karena ini kolom pertama
+            result = sheets_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=data_range).execute()
+            values = result.get("values", [])
+            data_count = len([row for row in values if row and row[0].strip() != ""])
 
-    next_data_row = 2 * (data_count + 1)
-    update_range = f"{sheet_name}!A{next_data_row}:D{next_data_row}"
-    body_data = {"values": [record]}
-    sheet.update(
-        spreadsheetId=spreadsheet_id,
-        range=update_range,
-        valueInputOption="USER_ENTERED",
-        body=body_data
-    ).execute()
-    print(BLUE + f"Data berhasil ditulis di {update_range}." + RESET)
+        next_data_row = 2 * (data_count + 1)
 
-    marker_range = f"{sheet_name}!Y{next_data_row}:Y{next_data_row}"
-    body_marker = {"values": [["M"]]}
-    sheet.update(
-        spreadsheetId=spreadsheet_id,
-        range=marker_range,
-        valueInputOption="USER_ENTERED",
-        body=body_marker
-    ).execute()
-    print(BLUE + f"Marker 'M' berhasil ditambahkan di {marker_range}" + RESET)
+        # =====================================================================
+        # BAGIAN INI PERLU DIUBAH UNTUK RANGE DATA BARU
+        update_range = f"{sheet_name}!A{next_data_row}:E{next_data_row}" # <-- SESUAIKAN RANGE DATA
+        # =====================================================================
+
+        body_data = {"values": [record]}
+        sheets_service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id,
+            range=update_range,
+            valueInputOption="USER_ENTERED",
+            body=body_data
+        ).execute()
+        print(BLUE + f"Data berhasil ditulis di {update_range}." + RESET)
+
+        # Marker 'M' tetap di kolom Y pada baris yang sama
+        marker_range = f"{sheet_name}!Y{next_data_row}:Y{next_data_row}"
+        body_marker = {"values": [["M"]]}
+        sheets_service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id,
+            range=marker_range,
+            valueInputOption="USER_ENTERED",
+            body=body_marker
+        ).execute()
+        print(BLUE + f"Marker 'M' berhasil ditambahkan di {marker_range}" + RESET)
+
+    except Exception as e:
+        print(f"❌ Gagal mengirim data ke Google Sheets: {e}")
+
 
 ########################################
 # MAIN PROGRAM
@@ -205,7 +227,7 @@ def send_to_sheets(record, sheet_name):
 def main():
     # Tampilkan logo di awal program
     tampilkan_logo()
-    
+
     # Baca konfigurasi dari file
     bot_token = read_file("token.txt")
     chat_id = read_file("idchat.txt")
@@ -216,59 +238,73 @@ def main():
         print("❌ Konfigurasi tidak lengkap. Pastikan token.txt dan idchat.txt sudah ada.")
         return
 
-    airdrop_name = input(BLUE + "\n🛎️  Masukkan Nama Airdrop: " + RESET)
+    airdrop_name = input(BLUE + "\n🛎  Masukkan Nama Airdrop: " + RESET)
 
-    anti_sybil_choice = input(BLUE + "\n⚠️  Kebanyakan anti sybil? [y/n]: " + RESET).strip().lower()
+    anti_sybil_choice = input(BLUE + "\n⚠  Perlu melihat panduan anti sybil? [y/n]: " + RESET).strip().lower() # Ubah teks pertanyaan biar lebih jelas
     if anti_sybil_choice == "y":
         input(BLUE + "\n🚨 Tekan Enter untuk melihat panduan anti sybil..." + RESET)
         anti_sybil_message = display_anti_sybil()
+        paham = input(BLUE + "\n✅ Apakah anda paham panduan anti sybil? [y/n]: " + RESET).strip().lower() # Tambah konfirmasi paham anti-sybil
+        if paham != "y":
+            print(BLUE + "\n❌ Silakan pelajari panduan anti sybil dan coba lagi." + RESET)
+            return
     else:
         anti_sybil_message = ""
-
-    paham = input(BLUE + "\n✅ Apakah anda paham? [y/n]: " + RESET).strip().lower()
-    if paham != "y":
-        print(BLUE + "\n❌ Silakan pelajari panduan anti sybil dan coba lagi." + RESET)
-        return
 
     print(BLUE + "\n🔗 Pastikan Anda telah:" + RESET)
     print(BLUE + "- Otorisasi akun sosial media" + RESET)
     print(BLUE + "- Connect wallet blockchain\n" + RESET)
+    input(BLUE + "Tekan Enter jika sudah siap mencatat langkah..." + RESET) # Tambah jeda agar user siap
 
     now = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     steps = display_steps()
-    selected_steps_input = input(BLUE + "🔢 Masukkan nomor langkah sebagai referensi (pisahkan dengan koma): " + RESET)
+    selected_steps_input = input(BLUE + "🔢 Masukkan nomor tipe langkah umum sebagai referensi (pisahkan dengan koma): " + RESET) # Ubah teks pertanyaan
     selected_step_keys = [s.strip() for s in selected_steps_input.split(",") if s.strip() in steps]
     selected_step_names = [steps[key] for key in selected_step_keys]
 
-    feedback = input(BLUE + "\n💬 Masukkan Feedback: " + RESET)
+    # ====== TAMBAHAN INPUT BARU UNTUK DESKRIPSI DETAIL ======
+    print(BLUE + "\n📝 Sekarang, deskripsikan langkah-langkah spesifik yang Anda lakukan untuk airdrop ini." + RESET)
+    print(BLUE + "(Contoh: 'Swap USDC ke ETH di Uniswap (jaringan Arbitrum), lalu Bridge ETH dari Arbitrum ke Optimism pakai Hop Protocol, Mint NFT gratis di situs proyek, lalu Daily Check-in di Galxe.')" + RESET)
+    detailed_steps = input(BLUE + ">>> Masukkan Deskripsi Langkah Spesifik: " + RESET)
+    # =======================================================
 
-    # Tampilkan ringkasan di terminal
+    feedback = input(BLUE + "\n💬 Masukkan Feedback / Catatan Lainnya: " + RESET) # Ubah teks feedback biar jelas beda dgn deskripsi
+
+    # Tampilkan ringkasan di terminal (tambahkan deskripsi detail)
     header(" DropXJungler Strategy Tools ")
-    print(f"{'Timestamp :':<18} {now}")
-    print(f"{'Nama Airdrop:':<18} {airdrop_name}")
-    print(f"{'StepbyStep :':<18} {', '.join(selected_step_names)}")
-    print(f"{'Feedback   :':<18} {feedback}")
+    print(f"{'Timestamp :':<25} {now}")
+    print(f"{'Nama Airdrop:':<25} {airdrop_name}")
+    print(f"{'Tipe Langkah (Umum):':<25} {', '.join(selected_step_names)}") # Ubah teks display
+    print(f"{'Deskripsi Langkah Spesifik:':<25} {detailed_steps}") # Tampilkan deskripsi detail
+    print(f"{'Feedback / Catatan:':<25} {feedback}") # Ubah teks display
     garis()
 
-    # Buat payload record untuk Spreadsheet (4 kolom)
-    record = [now, airdrop_name, ', '.join(selected_step_names), feedback]
+    # Buat payload record untuk Spreadsheet (sekarang 5 kolom)
+    # Urutkan sesuai dengan header_list di fungsi send_to_sheets
+    record = [now, airdrop_name, ', '.join(selected_step_names), detailed_steps, feedback] # <-- TAMBAHKAN detailed_steps
 
-    # Buat pesan ringkasan untuk Telegram dalam format Markdown, sertakan anti sybil jika ada
+    # Buat pesan ringkasan untuk Telegram dalam format Markdown (sertakan deskripsi detail)
     telegram_message = dedent(f"""
-    *DropXJungler Strategy Tools*
-    
-    *Timestamp:* {now}
-    *Nama Airdrop:* {airdrop_name}
-    *Step-by-Step:* {', '.join(selected_step_names)}
-    *Feedback:* {feedback}
-    
+    DropXJungler Strategy Tools - Laporan Tugas Baru
+
+    Timestamp: {now}
+    Nama Airdrop: {airdrop_name}
+    Tipe Langkah (Umum): {', '.join(selected_step_names) if selected_step_names else 'Tidak ada tipe dipilih'}
+    Deskripsi Langkah Spesifik:
+    {detailed_steps if detailed_steps else 'Tidak ada deskripsi spesifik'}
+
+    Feedback / Catatan: {feedback if feedback else 'Tidak ada feedback'}
+
+    ---
     {anti_sybil_message}
     """)
-    
-    final_choice = input(BLUE + "\nApakah anda yakin? [y/n]: " + RESET).strip().lower()
+
+    final_choice = input(BLUE + "\nApakah anda yakin ingin mengirim data ini? [y/n]: " + RESET).strip().lower() # Ubah teks konfirmasi
     if final_choice == "y":
         send_to_telegram(telegram_message, bot_token, chat_id, thread_id)
-        send_to_sheets(record, "Strategy")
+        # Pastikan Google Sheet Anda sudah punya kolom baru untuk "Deskripsi Langkah Spesifik"
+        # sebelum menjalankan ini, dan sesuaikan fungsi send_to_sheets jika perlu (sudah ditandai di atas)
+        send_to_sheets(record, "Strategy") # Sheet name "Strategy" as per original code
     else:
         print(BLUE + "Pengiriman data dibatalkan." + RESET)
 
