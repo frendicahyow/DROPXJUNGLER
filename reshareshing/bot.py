@@ -7,18 +7,14 @@ from googleapiclient.discovery import build
 import nest_asyncio
 import traceback # Import traceback untuk debugging error fatal
 
-# Terapkan nest_asyncio jika diperlukan (misalnya, di Jupyter)
 # Pastikan ini dipanggil sebelum loop event asyncio dibuat/digunakan
 try:
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_event_loop() # Baris ini mungkin menyebabkan DeprecationWarning jika dipanggil sebelum asyncio.run()
     if loop.is_running():
         print("Info: Asyncio loop is running, applying nest_asyncio.")
         nest_asyncio.apply()
-    else:
-        # Jika loop tidak berjalan, tidak perlu nest_asyncio
-        pass
+    # Tidak perlu else, jika tidak running, asyncio.run() akan membuat yang baru
 except RuntimeError:
-    # Jika tidak ada event loop saat ini, nest_asyncio mungkin diperlukan nanti
      print("Info: No current asyncio event loop, applying nest_asyncio.")
      nest_asyncio.apply()
 
@@ -30,7 +26,7 @@ WHITE = "\033[97m"
 CYAN = "\033[96m"
 RED = "\033[91m"
 PINK = "\033[95m"
-GREEN = "\033[92m" # Tambahkan warna hijau untuk sukses
+GREEN = "\033[92m"
 RESET = "\033[0m"
 
 # ================================================================
@@ -45,9 +41,10 @@ def tampilkan_logo():
 ██   ███   ███    ███    ██ ███   ███    ███  ██ ███    ███    ██    ██   ██    
 ████████   ██████████   ██   ██████ ████████   ████████████████████████   ██    
     
-                            RESHARESHING TOOLS
+                          RESHARESHING TOOLS
+                   
 """
-    print(WHITE + logo + RESET)
+    print(WHITE + logo + RESET) # Logo dicetak di sini
 
 def print_boxed(title, lines):
     """Mencetak output dalam format kotak."""
@@ -69,6 +66,7 @@ def print_boxed(title, lines):
             print(f"║ {line.ljust(max_length)} ║")
     print(f"╚{separator}╝" + RESET)
 
+
 # ================================================================
 # PEMUATAN KONFIGURASI (Refactored)
 # ================================================================
@@ -81,6 +79,7 @@ def load_mandatory_config(filepath, description):
             if not value:
                 print(RED + f"ERROR: File konfigurasi '{filepath}' ({description}) kosong!" + RESET)
                 exit(1)
+            # Pesan info dimuat sekarang dicetak SETELAH logo
             print(f"{CYAN}Info:{RESET} Konfigurasi '{description}' dimuat dari '{filepath}'.")
             return value
     except FileNotFoundError:
@@ -105,7 +104,6 @@ def load_spreadsheet_id(filepath):
         except Exception as e:
              print(RED + f"Warning:{RESET} Gagal membaca '{filepath}': {e}. Akan meminta input.")
 
-    # Jika file tidak ada, kosong, atau gagal dibaca
     while True:
         spreadsheet_id = input(RED + f"Masukkan Google Spreadsheet ID: " + RESET).strip()
         if spreadsheet_id:
@@ -116,7 +114,6 @@ def load_spreadsheet_id(filepath):
                 return spreadsheet_id
             except Exception as e:
                  print(RED + f"ERROR: Gagal menyimpan Spreadsheet ID ke '{filepath}': {e}" + RESET)
-                 # Tetap lanjutkan dengan ID yang diinput, tapi beri tahu user
                  return spreadsheet_id
         else:
             print(RED + "ERROR: Spreadsheet ID tidak boleh kosong!" + RESET)
@@ -146,8 +143,8 @@ CONFIG_FILES = {
     'TELEGRAM_THREAD_ID': ('threads.txt', 'ID Thread Telegram')
 }
 
-# --- Muat Semua Konfigurasi ---
-print(PINK + "\n--- Memuat Konfigurasi ---" + RESET)
+# --- Muat Semua Konfigurasi (akan dicetak setelah logo) ---
+# print(PINK + "\n--- Memuat Konfigurasi ---" + RESET) # Judul bisa dihilangkan jika mau lebih bersih
 # Muat konfigurasi wajib
 for var_name, (filename, description) in CONFIG_FILES.items():
     globals()[var_name] = load_mandatory_config(filename, description)
@@ -158,12 +155,12 @@ SPREADSHEET_ID = load_spreadsheet_id(SPREADSHEET_ID_FILE)
 
 # Cari dan validasi file credentials
 CREDENTIALS_FILE_PATH = find_credentials_file()
-print(PINK + "--- Konfigurasi Selesai Dimuat ---\n" + RESET)
+# print(PINK + "--- Konfigurasi Selesai Dimuat ---\n" + RESET) # Judul bisa dihilangkan
 
 # ================================================================
-# INISIALISASI KLIEN API
+# INISIALISASI KLIEN API (akan dicetak setelah logo & config)
 # ================================================================
-print(PINK + "--- Inisialisasi Klien API ---" + RESET)
+# print(PINK + "--- Inisialisasi Klien API ---" + RESET) # Judul bisa dihilangkan
 try:
     # Telegram Bot
     bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
@@ -178,14 +175,13 @@ try:
 except Exception as e:
     print(RED + f"ERROR saat inisialisasi klien API: {e}" + RESET)
     exit(1)
-print(PINK + "--- Inisialisasi Klien API Selesai ---\n" + RESET)
+# print(PINK + "--- Inisialisasi Klien API Selesai ---\n" + RESET) # Judul bisa dihilangkan
+
 
 # ================================================================
 # KONFIGURASI SPESIFIK RESHARESHING
 # ================================================================
 FOLDER_NAME = 'data_reshareshing'
-# Urutan field ini PENTING karena menentukan urutan kolom di preview & sheets
-# Sesuaikan label di `main()` jika urutan/nama file diubah
 FILE_FIELDS = [
     'situs', 'roadmap', 'whitepiper', 'faucet', 'funding',
     'block_explorer', 'informasi_teamnya', 'twitter',
@@ -196,12 +192,13 @@ MAIN_FIELDS_PROMPTS = {
     "snapshot": "Masukkan Tanggal Snapshot    : ",
     "listing_info": "Masukkan Informasi Listing   : "
 }
-SHEET_NAME = "reshareshing" # Nama sheet target di Google Sheets
-MARKER_COLUMN = "Y" # Kolom untuk tanda 'M'
+SHEET_NAME = "reshareshing"
+MARKER_COLUMN = "Y"
 
 # ================================================================
 # FUNGSI INPUT DATA RESHARESHING
 # ================================================================
+# ... (Fungsi get_data_from_file_or_prompt dan handle_reshareshing tetap sama) ...
 def get_data_from_file_or_prompt(field_name, prompt_text, folder, force_prompt):
     """Mendapatkan data dari file cache atau meminta input pengguna."""
     file_path = os.path.join(folder, f"{field_name}.txt")
@@ -213,43 +210,30 @@ def get_data_from_file_or_prompt(field_name, prompt_text, folder, force_prompt):
         try:
             with open(file_path, 'r') as f:
                 value = f.read().strip()
-            # Anggap cache valid jika file ada & tidak dipaksa prompt ulang
             read_from_cache = True
             print(f"{CYAN}Info:{RESET} Menggunakan data '{field_name}' dari cache.")
             return value
         except Exception as e:
             print(RED + f"Warning:{RESET} Gagal membaca cache '{file_path}': {e}. Akan meminta input.")
-            # Jika gagal baca cache, anggap saja tidak ada cache
-            file_exists = False # Anggap file tidak bisa digunakan
+            file_exists = False
 
-    # Minta input jika:
-    # 1. File tidak ada
-    # 2. force_prompt = True
-    # 3. Gagal membaca cache (file_exists di-set False di atas)
     if not read_from_cache:
         value = input(RED + prompt_text + RESET).strip()
-
-        # Logika penanganan force_prompt + input kosong:
         if force_prompt and not value and file_exists:
             try:
                 with open(file_path, 'r') as f:
                     old_value = f.read().strip()
                 print(f"{CYAN}Info:{RESET} Input kosong saat diminta ulang, menggunakan nilai cache lama '{old_value}' untuk '{field_name}'.")
-                return old_value # Kembalikan nilai lama, jangan simpan string kosong
+                return old_value
             except Exception as e:
                  print(RED + f"Warning:{RESET} Gagal membaca nilai cache lama saat input kosong: {e}. Menggunakan input kosong.")
-                 # Lanjutkan dengan nilai kosong jika gagal baca cache lama
 
-        # Simpan nilai baru ke file (termasuk string kosong jika itu inputnya,
-        # kecuali dalam kasus force_prompt + input kosong + cache terbaca di atas)
         try:
             with open(file_path, 'w') as f:
                 f.write(value)
         except Exception as e:
             print(RED + f"Warning:{RESET} Gagal menyimpan nilai '{field_name}' ke cache '{file_path}': {e}")
-
         return value
-
 
 def handle_reshareshing():
     """Mengumpulkan semua data yang diperlukan untuk reshareshing."""
@@ -259,18 +243,18 @@ def handle_reshareshing():
             print(f"{CYAN}Info:{RESET} Folder '{FOLDER_NAME}' dibuat.")
         except OSError as e:
             print(RED + f"ERROR: Gagal membuat folder '{FOLDER_NAME}': {e}" + RESET)
-            # Mungkin tidak bisa melanjutkan jika folder tak bisa dibuat
             exit(1)
 
     force_prompt = False
-    while True: # Loop untuk memastikan input y/n valid
+    while True:
+        # Pertanyaan ini akan muncul SETELAH logo dan pesan config/init
         use_new_data = input(RED + "Gunakan data baru (hapus cache lama)? (y/n): " + RESET).strip().lower()
         if use_new_data == 'y':
             try:
                 cache_files_deleted = 0
                 for file in os.listdir(FOLDER_NAME):
                     file_path = os.path.join(FOLDER_NAME, file)
-                    if os.path.isfile(file_path) and file.endswith(".txt"): # Hanya hapus file .txt
+                    if os.path.isfile(file_path) and file.endswith(".txt"):
                         os.remove(file_path)
                         cache_files_deleted += 1
                 if cache_files_deleted > 0:
@@ -278,99 +262,77 @@ def handle_reshareshing():
                 else:
                      print(CYAN + "Info: Tidak ada file cache untuk dihapus." + RESET)
                 force_prompt = True
-                break # Keluar loop konfirmasi
+                break
             except OSError as e:
                 print(RED + f"Error saat menghapus cache: {e}" + RESET)
-                # Biarkan user mencoba lagi atau melanjutkan tanpa menghapus
             except Exception as e:
                  print(RED + f"Error tak terduga saat menghapus cache: {e}" + RESET)
-
         elif use_new_data == 'n':
             print(CYAN + "Info: Menggunakan data cache (jika ada)." + RESET)
-            break # Keluar loop konfirmasi
+            break
         else:
             print(RED + "Input tidak valid. Harap masukkan 'y' atau 'n'." + RESET)
-            # Loop akan berlanjut untuk meminta input lagi
 
-    print("-" * 30) # Pemisah
+    print("-" * 30)
 
-    # --- Ambil Data Utama ---
     main_data = {}
     for field, prompt in MAIN_FIELDS_PROMPTS.items():
         main_data[field] = get_data_from_file_or_prompt(field, prompt, FOLDER_NAME, force_prompt)
 
-    # --- Ambil Data Link/Detail ---
-    # Pastikan urutan di sini sesuai dengan FILE_FIELDS
     detail_data_values = []
     for field in FILE_FIELDS:
-        # Membuat prompt yang lebih rapi
         prompt_label = field.replace('_', ' ').capitalize()
-        prompt = f"Masukkan Link {prompt_label.ljust(17)}: " # ljust untuk alignment
+        prompt = f"Masukkan Link {prompt_label.ljust(17)}: "
         detail_data_values.append(get_data_from_file_or_prompt(field, prompt, FOLDER_NAME, force_prompt))
 
-    # --- Ambil Feedback ---
     feedback = get_data_from_file_or_prompt("feedback", "\nMasukkan Feedback (Enter untuk skip): ", FOLDER_NAME, force_prompt)
-    print("-" * 30) # Pemisah
+    print("-" * 30)
 
-    # --- Susun Data Akhir Sesuai Urutan Header ---
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') # Format ISO-like lebih baik untuk sorting
-    # Urutan harus MATCH dengan `header` di `send_to_sheets`
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     final_data = [
-        timestamp,                 # Timestamp
-        main_data["nama_proyek"],  # Nama proyek
-        *detail_data_values,       # Semua link/detail dari FILE_FIELDS
-        main_data["snapshot"],     # Tanggal snapshot
-        main_data["listing_info"], # Informasi listing
-        feedback                   # Feedback
+        timestamp,
+        main_data["nama_proyek"],
+        *detail_data_values,
+        main_data["snapshot"],
+        main_data["listing_info"],
+        feedback
     ]
     return final_data
 
 # ================================================================
 # FUNGSI PENGIRIMAN
 # ================================================================
+# ... (Fungsi send_telegram dan send_to_sheets tetap sama) ...
 async def send_telegram(summary):
     """Mengirim ringkasan data ke grup/thread Telegram."""
     try:
-        # Coba konversi thread ID ke integer di sini, lebih aman
         message_thread_id_int = int(TELEGRAM_THREAD_ID) if TELEGRAM_THREAD_ID else None
-
         await bot.send_message(
             chat_id=TELEGRAM_CHAT_ID,
             text=summary,
-            message_thread_id=message_thread_id_int, # Gunakan ID integer atau None
-            parse_mode="HTML" # Gunakan HTML untuk bold, dll.
+            message_thread_id=message_thread_id_int,
+            parse_mode="HTML"
         )
         print(CYAN + "Info: Ringkasan berhasil dikirim ke Telegram." + RESET)
-        return True # Sukses
+        return True
     except telegram.error.TelegramError as e:
         print(RED + f"Error Telegram: {e}" + RESET)
     except ValueError:
         print(RED + f"Error: TELEGRAM_THREAD_ID ('{TELEGRAM_THREAD_ID}') harus berupa angka atau kosong." + RESET)
     except Exception as e:
         print(RED + f"Error tak terduga saat mengirim ke Telegram: {e}" + RESET)
-    return False # Gagal
+    return False
 
 def send_to_sheets(data, sheet_name):
     """Mengirim data ke Google Sheets, memastikan header, dan menambahkan marker."""
-    # Header HARUS sesuai dengan urutan `final_data` di `handle_reshareshing`
     header = [
         "Timestamp", "Nama proyek",
-        # Header dari FILE_FIELDS (cocokkan dengan label di `main`)
         "Situs", "Roadmap", "Whitepaper", "Faucet", "Funding", "Block Explorer",
         "Informasi Team", "Twitter", "Telegram", "Discord", "Github",
         "Dokumentasi", "Backer",
-        # Header dari MAIN_FIELDS (setelah detail) & Feedback
-        "Tanggal snapshot", "Informasi listing", "Feedback",
-        # Kolom Tambahan (jika perlu, sesuaikan MARKER_COLUMN jika header berubah)
-        # Misal: "Status"
+        "Tanggal snapshot", "Informasi listing", "Feedback"
     ]
-    # Pastikan MARKER_COLUMN di luar jangkauan header utama jika header berubah
-    # Contoh: Jika header sampai kolom R (18), marker bisa di S (19) dst.
-    # Kolom ke-18 adalah 'Feedback' (A=1, R=18). Marker di Y (25). OK.
-    # Jika header berubah, update MARKER_COLUMN = "S" (atau sesuai kebutuhan)
-
     try:
-        # 1. Dapatkan Metadata Sheet untuk memeriksa keberadaan sheet
         sheet_metadata = sheets_service.spreadsheets().get(spreadsheetId=SPREADSHEET_ID).execute()
         sheets = sheet_metadata.get('sheets', '')
         sheet_exists = any(s['properties']['title'] == sheet_name for s in sheets)
@@ -381,10 +343,8 @@ def send_to_sheets(data, sheet_name):
             body = {'requests': requests}
             sheets_service.spreadsheets().batchUpdate(spreadsheetId=SPREADSHEET_ID, body=body).execute()
             print(CYAN + f"Info: Sheet '{sheet_name}' berhasil dibuat." + RESET)
-            # Setelah dibuat, header pasti belum ada
 
-        # 2. Periksa/Tulis Header (setelah memastikan sheet ada)
-        header_range_end_col = chr(ord('A') + len(header) - 1) # Misal: A s/d R
+        header_range_end_col = chr(ord('A') + len(header) - 1)
         header_range = f"{sheet_name}!A1:{header_range_end_col}1"
 
         result_header = sheets_service.spreadsheets().values().get(
@@ -393,7 +353,6 @@ def send_to_sheets(data, sheet_name):
         ).execute()
         current_header = result_header.get('values', [[]])[0]
 
-        # Hanya tulis header jika header kosong atau berbeda
         if not current_header or current_header != header:
             body_header = {'values': [header]}
             sheets_service.spreadsheets().values().update(
@@ -404,32 +363,26 @@ def send_to_sheets(data, sheet_name):
             ).execute()
             print(RED + "Info: Header ditulis/diperbarui di baris 1." + RESET)
 
-        # 3. Tambahkan Data (Append)
-        # Pastikan `data` adalah list tunggal di dalam list `values`
         append_body = {'values': [data]}
         append_result = sheets_service.spreadsheets().values().append(
             spreadsheetId=SPREADSHEET_ID,
-            range=f"{sheet_name}!A:A", # Cukup kolom A untuk append
+            range=f"{sheet_name}!A:A",
             valueInputOption='USER_ENTERED',
-            insertDataOption='INSERT_ROWS', # Sisipkan baris baru di akhir data
+            insertDataOption='INSERT_ROWS',
             body=append_body
         ).execute()
         print(CYAN + f"Info: Data berhasil ditambahkan ke sheet '{sheet_name}'." + RESET)
 
-        # 4. Tambahkan Marker 'M'
         updated_range_str = append_result.get('updates', {}).get('updatedRange', '')
-        # Contoh updated_range_str: 'reshareshing'!A5:R5 (jika data sampai R)
         if '!' in updated_range_str and ':' in updated_range_str:
             try:
-                range_part = updated_range_str.split('!')[1] # A5:R5
-                start_cell = range_part.split(':')[0] # A5
-                # Ekstrak nomor baris dengan lebih aman
+                range_part = updated_range_str.split('!')[1]
+                start_cell = range_part.split(':')[0]
                 row_number_str = ''.join(filter(str.isdigit, start_cell))
-
                 if row_number_str:
-                    row_number = int(row_number_str) # Konversi ke integer
+                    row_number = int(row_number_str)
                     marker_range = f"{sheet_name}!{MARKER_COLUMN}{row_number}"
-                    body_marker = {'values': [["M"]]} # Nilai marker
+                    body_marker = {'values': [["M"]]}
                     sheets_service.spreadsheets().values().update(
                         spreadsheetId=SPREADSHEET_ID,
                         range=marker_range,
@@ -437,9 +390,9 @@ def send_to_sheets(data, sheet_name):
                         body=body_marker
                     ).execute()
                     print(CYAN + f"Info: Marker 'M' ditambahkan di {marker_range}." + RESET)
-                    return True # Sukses
+                    return True
                 else:
-                    print(RED + "Warning: Tidak bisa menentukan nomor baris dari range ({updated_range_str}) untuk menambahkan marker." + RESET)
+                    print(RED + f"Warning: Tidak bisa menentukan nomor baris dari range ({updated_range_str}) untuk menambahkan marker." + RESET)
             except ValueError:
                  print(RED + f"Warning: Gagal mengurai nomor baris dari '{start_cell}'." + RESET)
             except Exception as e:
@@ -449,79 +402,60 @@ def send_to_sheets(data, sheet_name):
 
     except Exception as e:
         print(RED + f"Error saat berinteraksi dengan Google Sheets: {e}" + RESET)
-        # Cetak traceback jika error tidak terduga untuk debugging
-        if not isinstance(e, (FileNotFoundError, ValueError)): # Jangan print traceback untuk error yg sudah ditangani
+        if not isinstance(e, (FileNotFoundError, ValueError)):
              traceback.print_exc()
-
-    return False # Gagal
+    return False
 
 # ================================================================
 # FUNGSI UTAMA (MAIN EXECUTION)
 # ================================================================
 async def main_async():
     """Fungsi utama asinkron untuk menjalankan alur reshareshing."""
-    tampilkan_logo()
+    # tampilkan_logo() # <-- DIHAPUS DARI SINI
 
     while True: # Loop utama untuk input data
         collected_data = handle_reshareshing()
 
-        # Label untuk preview dan ringkasan (HARUS sesuai urutan `final_data`)
-        # Sesuaikan ini jika FILE_FIELDS atau MAIN_FIELDS berubah
         labels = [
             "Timestamp", "Nama Proyek",
-            # Label dari FILE_FIELDS
             "Situs", "Roadmap", "Whitepaper", "Faucet", "Funding", "Block Explorer",
             "Informasi Team", "Twitter", "Telegram", "Discord", "Github",
             "Dokumentasi", "Backer",
-            # Label dari MAIN_FIELDS & Feedback
             "Tanggal Snapshot", "Informasi Listing", "Feedback"
         ]
 
-        # Pastikan jumlah label sama dengan jumlah data
         if len(labels) != len(collected_data):
              print(RED + f"FATAL ERROR: Jumlah label ({len(labels)}) tidak cocok dengan jumlah data ({len(collected_data)})!" + RESET)
              print(RED + "Periksa urutan/jumlah field di FILE_FIELDS, MAIN_FIELDS_PROMPTS, dan labels di main_async." + RESET)
              exit(1)
 
-
-        # Tampilkan preview data yang akan dikirim
         preview_lines = [f"{label.ljust(18)}: {value}" for label, value in zip(labels, collected_data)]
         print_boxed("PREVIEW DATA YANG AKAN DIKIRIM", preview_lines)
 
-        # Konfirmasi sebelum mengirim
-        while True: # Loop konfirmasi
+        while True:
             confirm = input(RED + "\nKirim data ini? (y/n/q untuk keluar): " + RESET).strip().lower()
             if confirm == 'y':
-                break # Lanjutkan ke pengiriman
+                break
             elif confirm == 'n':
                 print(RED + "\nInput data dibatalkan. Mengulang..." + RESET)
-                # Kembali ke awal loop `while True` utama untuk input ulang
-                break # Keluar loop konfirmasi, kembali ke loop input utama
+                break
             elif confirm == 'q':
                 print(RED + "\nProses dibatalkan oleh pengguna." + RESET)
-                return # Keluar dari fungsi main_async
+                return
             else:
                 print(RED + "Pilihan tidak valid. Masukkan 'y', 'n', atau 'q'." + RESET)
 
         if confirm == 'y':
-            # Buat ringkasan untuk Telegram (dengan format HTML)
             summary_lines = []
             for label, value in zip(labels, collected_data):
-                 # Handle nilai kosong agar tidak tampil aneh
                  display_value = value if value else "<i>(Kosong)</i>"
                  summary_lines.append(f"• <b>{label}:</b> {display_value}")
-
-            telegram_summary = f"📋 <b>Ringkasan Data Reshareshing - {collected_data[1]}</b>\n\n" + "\n".join(summary_lines) # Index 1 = Nama Proyek
+            telegram_summary = f"📋 <b>Ringkasan Data Reshareshing - {collected_data[1]}</b>\n\n" + "\n".join(summary_lines)
 
             print("\n--- Memulai Proses Pengiriman ---")
-            # Kirim ke Telegram (asinkron)
             telegram_success = await send_telegram(telegram_summary)
-
-            # Kirim ke Google Sheets (sinkron, tapi panggil dari async context)
-            # Menjalankannya dalam executor agar tidak memblokir loop event (best practice)
             loop = asyncio.get_event_loop()
             sheets_success = await loop.run_in_executor(None, send_to_sheets, collected_data, SHEET_NAME)
-
             print("--- Proses Pengiriman Selesai ---")
 
             if telegram_success and sheets_success:
@@ -533,20 +467,16 @@ async def main_async():
                 if not sheets_success:
                      print(RED + "   - Gagal mengirim ke Google Sheets." + RESET)
 
-            # Tanya apakah ingin input data lagi
             while True:
                  lanjut = input(PINK + "\nInput data lagi? (y/n): " + RESET).strip().lower()
                  if lanjut == 'y':
-                     print("\n" + "="*40 + "\n") # Pemisah untuk input baru
-                     break # Kembali ke awal loop `while True` utama
+                     print("\n" + "="*40 + "\n")
+                     break
                  elif lanjut == 'n':
-                     return # Keluar dari fungsi main_async
+                     return
                  else:
                      print(RED + "Input tidak valid. Masukkan 'y' atau 'n'." + RESET)
-            # Jika lanjut == 'y', loop utama akan berlanjut
-
         elif confirm == 'n':
-             # Jika konfirmasi 'n', loop utama akan otomatis mengulang
              continue
 
 
@@ -554,14 +484,23 @@ async def main_async():
 # ENTRY POINT (Jalankan Skrip)
 # ================================================================
 if __name__ == '__main__':
+    # Tampilkan logo SEBELUM memuat konfigurasi atau inisialisasi apapun
+    tampilkan_logo() # <-- DIPINDAHKAN KE SINI
+
+    # Beri jeda sedikit agar logo terlihat sebelum pesan lain muncul (opsional)
+    # import time
+    # time.sleep(0.1)
+
+    print(PINK + "\n--- Memuat Konfigurasi & Inisialisasi ---" + RESET) # Judul gabungan
+
     try:
-        # Gunakan asyncio.run() untuk menjalankan fungsi async utama
+        # Jalankan loop async utama SETELAH semua setup selesai
         asyncio.run(main_async())
+
     except KeyboardInterrupt:
         print(f"\n{RED}🚫 Program dihentikan oleh pengguna (Ctrl+C).{RESET}")
     except Exception as e:
-        # Tangkap error tak terduga di level tertinggi
-        print(f"\n{RED}💥 Error fatal tidak terduga di luar loop utama: {e}{RESET}")
-        traceback.print_exc() # Cetak traceback untuk debugging
+        print(f"\n{RED}💥 Error fatal tidak terduga: {e}{RESET}")
+        traceback.print_exc()
     finally:
         print(WHITE + "\nKeluar dari program Reshareshing Tools." + RESET)
