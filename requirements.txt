@@ -6,3 +6,5 @@ gspread
 oauth2client
 colorama
 nest_asyncio
+python-grpcio
+google-generativeai
