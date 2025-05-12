@@ -145,7 +145,7 @@ def send_to_sheets(record, sheet_name):
     SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
     # Dapatkan direktori script saat ini
-    script_dir = os.path.dirname(os.path.realpath(_file_))
+    script_dir = os.path.dirname(os.path.realpath(__file__))
 
     # Dapatkan direktori induk, yaitu folder DROPXJUNGLER
     parent_dir = os.path.abspath(os.path.join(script_dir, os.pardir))
